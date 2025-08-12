@@ -1,0 +1,19 @@
+body {
+    background-color: #fdfaf6; /* Warna latar belakang lembut */
+    font-family: 'Garamond', serif;
+}
+.container {
+    max-width: 720px;
+}
+.btn-primary {
+    background-color: #a0826c; /* Warna tema perkahwinan */
+    border-color: #a0826c;
+}
+.btn-primary:hover {
+    background-color: #8a6d58;
+    border-color: #8a6d58;
+}
+video, img, canvas {
+    border: 2px solid #eee;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
