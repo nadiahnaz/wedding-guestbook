@@ -1,121 +1,167 @@
-// Dapatkan semua elemen DOM seperti sebelum ini
-const greetingSection = document.getElementById('greeting-section');
-const cameraSection = document.getElementById('camera-section');
-const thankYouSection = document.getElementById('thank-you-section');
-// ... dan butang-butang lain serta elemen video/canvas/img
-
-const startCameraBtn = document.getElementById('start-camera-btn');
-const snapPhotoBtn = document.getElementById('snap-photo-btn');
-const uploadBtn = document.getElementById('upload-btn');
-const retakeBtn = document.getElementById('retake-btn');
-
-const videoFeed = document.getElementById('camera-feed');
-const photoCanvas = document.getElementById('photo-canvas');
-const photoPreview = document.getElementById('photo-preview');
-
-let capturedBlob = null; // To store the captured photo/video data
-
-// --- PERUBAHAN PENTING DI SINI ---
 // Tampal URL Google Apps Script yang anda salin tadi
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwoYgbo4ej1Z51v5SgU-3Eqr-hDdugp2qPxJD2GexThWeLzxJvDY_ciEEYze5ENEnCzYQ/exec";
 
-// 1. Event listener to start the camera
-startCameraBtn.addEventListener('click', async () => {
-    try {
-        // Request access to the user's camera
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'environment' }, // 'user' for front camera, 'environment' for back
-            audio: false 
-        });
-        
-        greetingSection.classList.add('d-none');
-        cameraSection.classList.remove('d-none');
-        
-        videoFeed.srcObject = stream;
-    } catch (error) {
-        console.error("Error accessing camera: ", error);
-        alert("Tidak dapat mengakses kamera. Sila benarkan akses kamera pada pelayar anda.");
+// -- DOM ELEMENTS --
+const greetingSection = document.getElementById('greeting-section');
+const cameraSection = document.getElementById('camera-section');
+const loadingSection = document.getElementById('loading-section');
+const selfiePromptSection = document.getElementById('selfie-prompt-section');
+const thankYouSection = document.getElementById('thank-you-section');
+const loadingText = document.getElementById('loading-text');
+
+const cameraFeed = document.getElementById('camera-feed');
+const photoCanvas = document.getElementById('photo-canvas');
+
+const initCameraBtn = document.getElementById('init-camera-btn');
+const startRecordBtn = document.getElementById('start-record-btn');
+const stopRecordBtn = document.getElementById('stop-record-btn');
+const switchCameraBtn = document.getElementById('switch-camera-btn');
+const snapPhotoBtn = document.getElementById('snap-photo-btn');
+const yesSelfieBtn = document.getElementById('yes-selfie-btn');
+const noSelfieBtn = document.getElementById('no-selfie-btn');
+
+// -- STATE MANAGEMENT --
+let currentStream;
+let mediaRecorder;
+let recordedChunks = [];
+let facingMode = 'environment'; // 'environment' = back, 'user' = front
+
+// -- FUNCTIONS --
+
+// Function to start the camera
+async function startCamera(mode) {
+    if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
     }
-});
+    try {
+        currentStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: mode },
+            audio: true, // Enable audio for video
+        });
+        cameraFeed.srcObject = currentStream;
+    } catch (error) {
+        alert("Gagal mengakses kamera. Sila semak kebenaran dan pastikan tiada aplikasi lain menggunakannya.");
+        console.error("Camera Error:", error);
+    }
+}
 
-// 2. Event listener to snap a photo
-snapPhotoBtn.addEventListener('click', () => {
-    // Set canvas dimensions to match video feed
-    photoCanvas.width = videoFeed.videoWidth;
-    photoCanvas.height = videoFeed.videoHeight;
-    
-    // Draw the current video frame onto the canvas
-    const context = photoCanvas.getContext('2d');
-    context.drawImage(videoFeed, 0, 0, photoCanvas.width, photoCanvas.height);
-    
-    // Show the preview and hide the live feed
-    videoFeed.classList.add('d-none');
-    photoPreview.src = photoCanvas.toDataURL('image/jpeg');
-    photoPreview.classList.remove('d-none');
-    
-    // Show/hide relevant buttons
-    snapPhotoBtn.classList.add('d-none');
-    uploadBtn.classList.remove('d-none');
-    retakeBtn.classList.remove('d-none');
-
-    // Convert canvas image to a Blob for upload
-    photoCanvas.toBlob(blob => {
-        capturedBlob = blob;
-    }, 'image/jpeg', 0.9); // 90% quality
-});
-
-// 4. Event listener to retake the photo
-retakeBtn.addEventListener('click', () => {
-    // Reset the interface to show the live camera feed again
-    capturedBlob = null;
-    videoFeed.classList.remove('d-none');
-    photoPreview.classList.add('d-none');
-    snapPhotoBtn.classList.remove('d-none');
-    uploadBtn.classList.add('d-none');
-    retakeBtn.classList.add('d-none');
-});
-
-// --- PERUBAHAN BESAR PADA FUNGSI UPLOAD ---
-uploadBtn.addEventListener('click', async () => {
-    uploadBtn.disabled = true;
-    uploadBtn.textContent = 'Memuat Naik...';
-
-    // Dapatkan data gambar sebagai Base64 dari canvas
-    // Kita buang bahagian 'data:image/jpeg;base64,' dari string
-    const base64ImageData = photoCanvas.toDataURL('image/jpeg').split(',')[1];
-    
-    // Cipta nama fail yang unik
-    const fileName = `guest-photo-${Date.now()}.jpeg`;
-
-    // Cipta objek data untuk dihantar ke Google Apps Script
-    const payload = {
-        imageData: base64ImageData,
-        fileName: fileName,
-    };
-
+// Generic file upload function
+async function uploadFile(base64Data, fileName, mimeType) {
+    const payload = { fileData: base64Data, fileName, mimeType };
     try {
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
             body: JSON.stringify(payload),
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8', // Apps Script lebih gemar text/plain untuk POST
-            },
         });
-
         const result = await response.json();
-
-        if (result.status === 'success') {
-            // Tunjuk mesej terima kasih jika berjaya
-            cameraSection.classList.add('d-none');
-            thankYouSection.classList.remove('d-none');
-        } else {
+        if (result.status !== 'success') {
             throw new Error(result.message);
         }
-
+        return true;
     } catch (error) {
         console.error('Upload failed:', error);
-        alert(`Gagal memuat naik: ${error.message}`);
-        uploadBtn.disabled = false;
-        uploadBtn.textContent = 'Muat Naik';
+        alert(`Gagal memuat naik fail: ${error.message}`);
+        return false;
+    }
+}
+
+// -- EVENT LISTENERS --
+
+initCameraBtn.addEventListener('click', () => {
+    greetingSection.classList.add('d-none');
+    cameraSection.classList.remove('d-none');
+    startCamera(facingMode);
+});
+
+switchCameraBtn.addEventListener('click', () => {
+    facingMode = facingMode === 'environment' ? 'user' : 'environment';
+    startCamera(facingMode);
+});
+
+startRecordBtn.addEventListener('click', () => {
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(currentStream, { mimeType: 'video/webm' });
+
+    mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+        }
+    };
+
+    mediaRecorder.onstop = async () => {
+        cameraSection.classList.add('d-none');
+        loadingSection.classList.remove('d-none');
+        loadingText.textContent = "Memuat Naik Video...";
+
+        const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+        const reader = new FileReader();
+        reader.readAsDataURL(videoBlob);
+        reader.onloadend = async () => {
+            const base64String = reader.result.split(',')[1];
+            const success = await uploadFile(base64String, `guest-video-${Date.now()}.webm`, 'video/webm');
+            loadingSection.classList.add('d-none');
+            if (success) {
+                selfiePromptSection.classList.remove('d-none');
+            } else {
+                greetingSection.classList.remove('d-none'); // Go back to start on failure
+            }
+        };
+    };
+
+    mediaRecorder.start();
+    startRecordBtn.classList.add('d-none');
+    stopRecordBtn.classList.remove('d-none');
+    switchCameraBtn.disabled = true;
+});
+
+stopRecordBtn.addEventListener('click', () => {
+    mediaRecorder.stop();
+});
+
+yesSelfieBtn.addEventListener('click', () => {
+    selfiePromptSection.classList.add('d-none');
+    cameraSection.classList.remove('d-none');
+    
+    // Switch to photo mode UI
+    startRecordBtn.classList.add('d-none');
+    stopRecordBtn.classList.add('d-none');
+    snapPhotoBtn.classList.remove('d-none');
+    switchCameraBtn.disabled = false;
+
+    // Force selfie camera
+    if (facingMode !== 'user') {
+        facingMode = 'user';
+        startCamera(facingMode);
+    }
+});
+
+noSelfieBtn.addEventListener('click', () => {
+    selfiePromptSection.classList.add('d-none');
+    thankYouSection.classList.remove('d-none');
+    if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+    }
+});
+
+snapPhotoBtn.addEventListener('click', async () => {
+    photoCanvas.width = cameraFeed.videoWidth;
+    photoCanvas.height = cameraFeed.videoHeight;
+    photoCanvas.getContext('2d').drawImage(cameraFeed, 0, 0);
+    
+    cameraSection.classList.add('d-none');
+    loadingSection.classList.remove('d-none');
+    loadingText.textContent = "Memuat Naik Gambar...";
+
+    const base64String = photoCanvas.toDataURL('image/jpeg').split(',')[1];
+    const success = await uploadFile(base64String, `guest-photo-${Date.now()}.jpeg`, 'image/jpeg');
+    
+    loadingSection.classList.add('d-none');
+    if (success) {
+        thankYouSection.classList.remove('d-none');
+    } else {
+        selfiePromptSection.classList.remove('d-none'); // Go back to prompt on failure
+    }
+     if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
     }
 });
