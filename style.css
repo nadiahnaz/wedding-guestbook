@@ -24,7 +24,7 @@ body {
 .container {
     text-align: center;
     max-width: 500px;
-    padding: 10%;
+    padding: 5%;
     /* margin-top: 5%; */
 }
 
@@ -86,10 +86,11 @@ body {
     display: flex;
     gap: 1rem;
     justify-content: center;
+    
 }
 
 .btn {
-    padding: 0.75rem 1.5rem;
+    padding: 1.1rem 1rem;
     border-radius: 9999px; /* Menjadikan butang bujur */
     font-weight: 500;
     font-size: 1rem;
@@ -97,6 +98,7 @@ body {
     border: 1px solid transparent;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
+    margin-bottom: 7%;
 }
 
 /* Butang utama (diisi) */
@@ -120,6 +122,24 @@ body {
 
 .btn-secondary:hover {
     background-color: #eef3f0;
+}
+
+.btn:disabled, .btn[disabled] {
+    background-color: grey;
+    border-color: grey;
+    /* Kurangkan kelegapan untuk menunjukkan ia tidak aktif */
+    opacity: 0.6; 
+    /* Tukar kursor untuk menunjukkan butang tidak boleh ditekan */
+    cursor: not-allowed;
+}
+
+
+.btn:focus,
+.btn:focus-visible {
+    /* Buang garis luar biru lalai pelayar */
+    outline: none;
+    /* Gantikan dengan 'glow' (bayang kotak) yang sepadan dengan tema */
+    box-shadow: 0 0 0 4px rgba(130, 157, 142, 0.5);
 }
 
 /* Pastikan bahagian kamera juga kelihatan baik */
