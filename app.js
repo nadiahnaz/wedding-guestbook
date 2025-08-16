@@ -16,6 +16,12 @@ const initCameraBtn = document.getElementById('init-camera-btn');
 const startRecordBtn = document.getElementById('start-record-btn');
 const stopRecordBtn = document.getElementById('stop-record-btn');
 const switchCameraBtn = document.getElementById('switch-camera-btn');
+
+const previewSection = document.getElementById('preview-section');
+const previewVideo = document.getElementById('preview-video');
+const retakeBtn = document.getElementById('retake-btn');
+const uploadBtn = document.getElementById('upload-btn');
+
 const snapPhotoBtn = document.getElementById('snap-photo-btn');
 const yesSelfieBtn = document.getElementById('yes-selfie-btn');
 const noSelfieBtn = document.getElementById('no-selfie-btn');
@@ -24,7 +30,7 @@ const noSelfieBtn = document.getElementById('no-selfie-btn');
 let currentStream;
 let mediaRecorder;
 let recordedChunks = [];
-let facingMode = 'environment'; // 'environment' = back, 'user' = front
+let facingMode = 'user'; // 'environment' = back, 'user' = front
 
 // -- FUNCTIONS --
 
