@@ -39,6 +39,7 @@ async function startCamera(mode) {
             audio: true, // Enable audio for video
         });
         cameraFeed.srcObject = currentStream;
+        cameraFeed.muted = true; // 🔇 Prevent echo by muting preview
     } catch (error) {
         alert("Gagal mengakses kamera. Sila semak kebenaran dan pastikan tiada aplikasi lain menggunakannya.");
         console.error("Camera Error:", error);
@@ -89,22 +90,50 @@ startRecordBtn.addEventListener('click', () => {
     };
 
     mediaRecorder.onstop = async () => {
-        cameraSection.classList.add('d-none');
-        loadingSection.classList.remove('d-none');
-        loadingText.textContent = "Memuat Naik Video...";
-
         const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-        const reader = new FileReader();
-        reader.readAsDataURL(videoBlob);
-        reader.onloadend = async () => {
-            const base64String = reader.result.split(',')[1];
-            const success = await uploadFile(base64String, `guest-video-${Date.now()}.webm`, 'video/webm');
-            loadingSection.classList.add('d-none');
-            if (success) {
-                selfiePromptSection.classList.remove('d-none');
-            } else {
-                greetingSection.classList.remove('d-none'); // Go back to start on failure
-            }
+
+        // Stop camera to save resources
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+        }
+
+        // Show preview section
+        cameraSection.classList.add('d-none');
+        previewSection.classList.remove('d-none');
+
+        // Load the recorded video into the preview element
+        const previewURL = URL.createObjectURL(videoBlob);
+        document.getElementById('preview-video').src = previewURL;
+
+        // Handle Retake
+        document.getElementById('retake-btn').onclick = () => {
+            previewSection.classList.add('d-none');
+            cameraSection.classList.remove('d-none');
+            startCamera(facingMode);
+        };
+
+        // Handle Upload
+        document.getElementById('upload-btn').onclick = async () => {
+            previewSection.classList.add('d-none');
+            loadingSection.classList.remove('d-none');
+            loadingText.textContent = "Memuat Naik Video...";
+
+            const reader = new FileReader();
+            reader.readAsDataURL(videoBlob);
+            reader.onloadend = async () => {
+                const base64String = reader.result.split(',')[1];
+                const success = await uploadFile(
+                    base64String,
+                    `guest-video-${Date.now()}.webm`,
+                    'video/webm'
+                );
+                loadingSection.classList.add('d-none');
+                if (success) {
+                    selfiePromptSection.classList.remove('d-none');
+                } else {
+                    greetingSection.classList.remove('d-none'); // back to start on fail
+                }
+            };
         };
     };
 
