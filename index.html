@@ -31,7 +31,7 @@
 
         </div>
 
-        <div id="camera-section" class="d-none">
+         <div id="camera-section" class="d-none">
             <div class="position-relative">
                 <video id="camera-feed" autoplay playsinline class="w-100 border rounded"></video>
                 <canvas id="photo-canvas" class="d-none"></canvas>
@@ -41,7 +41,13 @@
                 <button id="stop-record-btn" class="btn btn-secondary d-none">Henti</button>
                 <button id="snap-photo-btn" class="btn btn-primary d-none">Ambil Gambar</button>
                 <button id="switch-camera-btn" class="btn btn-secondary">Tukar Sudut Camera</button>
-                
+            </div>
+
+            <!-- 🔹 Fallback for devices without MediaRecorder -->
+            <div id="fallback-upload" class="mt-3 d-none">
+                <p>⚠️ Peranti anda tidak menyokong rakaman terus.<br>
+                   Sila gunakan kamera untuk merakam & muat naik:</p>
+                <input type="file" id="video-upload" accept="video/*" capture="user" class="form-control">
             </div>
         </div>
 

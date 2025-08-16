@@ -30,6 +30,9 @@ const previewPhoto = document.getElementById('preview-photo');
 const retakePhotoBtn = document.getElementById('retake-photo-btn');
 const uploadPhotoBtn = document.getElementById('upload-photo-btn');
 
+const fallbackUpload = document.getElementById('fallback-upload');
+const videoUpload = document.getElementById('video-upload');
+
 // -- STATE --
 let currentStream;
 let mediaRecorder;
@@ -77,10 +80,57 @@ async function uploadFile(base64Data, fileName, mimeType) {
 initCameraBtn.addEventListener('click', () => {
     greetingSection.classList.add('d-none');
     cameraSection.classList.remove('d-none');
+
+    // ✅ Check support
+    if (typeof MediaRecorder === "undefined") {
+
+        alert("⚠️ Rakaman live tidak disokong pada peranti ini.\n\nAnda boleh gunakan kamera telefon untuk merakam video dan muat naik.");
+        document.getElementById('controls').classList.add('d-none');
+        fallbackUpload.classList.remove('d-none');
+        return;
+    }
+
     startRecordBtn.classList.remove('d-none');
     stopRecordBtn.classList.add('d-none');
     snapPhotoBtn.classList.add('d-none');
     startCamera(facingMode);
+});
+
+// ✅ Handle fallback upload flow
+videoUpload?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Show preview
+    cameraSection.classList.add('d-none');
+    previewSection.classList.remove('d-none');
+    previewVideo.src = URL.createObjectURL(file);
+    previewVideo.controls = true;
+    previewVideo.play();
+
+    // Retake → go back
+    retakeBtn.onclick = () => {
+        previewSection.classList.add('d-none');
+        cameraSection.classList.remove('d-none');
+        videoUpload.value = "";
+    };
+
+    // Upload
+    uploadBtn.onclick = async () => {
+        previewSection.classList.add('d-none');
+        loadingSection.classList.remove('d-none');
+        loadingText.textContent = "Memuat Naik Video...";
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = async () => {
+            const base64String = reader.result.split(',')[1];
+            const success = await uploadFile(base64String, `guest-video-${Date.now()}.mp4`, file.type);
+            loadingSection.classList.add('d-none');
+            if (success) selfiePromptSection.classList.remove('d-none');
+            else greetingSection.classList.remove('d-none');
+        };
+    };
 });
 
 switchCameraBtn.addEventListener('click', () => {
