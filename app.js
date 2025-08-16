@@ -98,7 +98,7 @@ startRecordBtn.addEventListener('click', () => {
     mediaRecorder.onstop = async () => {
         const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
 
-        // Stop camera to save resources
+        // Stop camera
         if (currentStream) {
             currentStream.getTracks().forEach(track => track.stop());
         }
@@ -107,19 +107,27 @@ startRecordBtn.addEventListener('click', () => {
         cameraSection.classList.add('d-none');
         previewSection.classList.remove('d-none');
 
-        // Load the recorded video into the preview element
-        const previewURL = URL.createObjectURL(videoBlob);
-        document.getElementById('preview-video').src = previewURL;
+        // Load video in preview player
+        previewVideo.src = URL.createObjectURL(videoBlob);
+        previewVideo.controls = true;
+        previewVideo.play();
 
-        // Handle Retake
-        document.getElementById('retake-btn').onclick = () => {
+        // Retake button → Go back to camera, wait for Start click
+        retakeBtn.onclick = () => {
             previewSection.classList.add('d-none');
             cameraSection.classList.remove('d-none');
+
+            // Show Start button again
+            startRecordBtn.classList.remove('d-none');
+            stopRecordBtn.classList.add('d-none');
+            switchCameraBtn.disabled = false;
+
+            // Restart camera without recording
             startCamera(facingMode);
         };
 
-        // Handle Upload
-        document.getElementById('upload-btn').onclick = async () => {
+        // Upload button → Send to Google Drive
+        uploadBtn.onclick = async () => {
             previewSection.classList.add('d-none');
             loadingSection.classList.remove('d-none');
             loadingText.textContent = "Memuat Naik Video...";
@@ -137,11 +145,12 @@ startRecordBtn.addEventListener('click', () => {
                 if (success) {
                     selfiePromptSection.classList.remove('d-none');
                 } else {
-                    greetingSection.classList.remove('d-none'); // back to start on fail
+                    greetingSection.classList.remove('d-none');
                 }
             };
         };
     };
+
 
     mediaRecorder.start();
     startRecordBtn.classList.add('d-none');
