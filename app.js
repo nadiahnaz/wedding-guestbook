@@ -25,12 +25,17 @@ const uploadBtn = document.getElementById('upload-btn');
 const snapPhotoBtn = document.getElementById('snap-photo-btn');
 const yesSelfieBtn = document.getElementById('yes-selfie-btn');
 const noSelfieBtn = document.getElementById('no-selfie-btn');
+const photoPreviewSection = document.getElementById('photo-preview-section');
+const previewPhoto = document.getElementById('preview-photo');
+const retakePhotoBtn = document.getElementById('retake-photo-btn');
+const uploadPhotoBtn = document.getElementById('upload-photo-btn');
 
 // -- STATE --
 let currentStream;
 let mediaRecorder;
 let recordedChunks = [];
 let facingMode = 'user'; // 'environment' or 'user'
+let capturedPhotoBlob = null;
 
 // Start camera
 async function startCamera(mode) {
@@ -164,24 +169,50 @@ noSelfieBtn.addEventListener('click', () => {
     if (currentStream) currentStream.getTracks().forEach(track => track.stop());
 });
 
-snapPhotoBtn.addEventListener('click', async () => {
+snapPhotoBtn.addEventListener('click', () => {
     photoCanvas.width = cameraFeed.videoWidth;
     photoCanvas.height = cameraFeed.videoHeight;
     photoCanvas.getContext('2d').drawImage(cameraFeed, 0, 0);
 
-    cameraSection.classList.add('d-none');
+    // Convert to blob
+    photoCanvas.toBlob((blob) => {
+        capturedPhotoBlob = blob;
+
+        // Show preview
+        cameraSection.classList.add('d-none');
+        photoPreviewSection.classList.remove('d-none');
+        previewPhoto.src = URL.createObjectURL(blob);
+
+        // Stop camera
+        if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+    }, 'image/jpeg');
+});
+
+retakePhotoBtn.addEventListener('click', () => {
+    photoPreviewSection.classList.add('d-none');
+    cameraSection.classList.remove('d-none');
+    snapPhotoBtn.classList.remove('d-none');
+    switchCameraBtn.disabled = false;
+    startCamera(facingMode);
+});
+
+uploadPhotoBtn.addEventListener('click', async () => {
+    if (!capturedPhotoBlob) return;
+
+    photoPreviewSection.classList.add('d-none');
     loadingSection.classList.remove('d-none');
     loadingText.textContent = "Memuat Naik Gambar...";
 
-    const base64String = photoCanvas.toDataURL('image/jpeg').split(',')[1];
-    const success = await uploadFile(base64String, `guest-photo-${Date.now()}.jpeg`, 'image/jpeg');
-
-    loadingSection.classList.add('d-none');
-    if (success) {
-        thankYouSection.classList.remove('d-none');
-    } else {
-        selfiePromptSection.classList.remove('d-none');
-    }
-
-    if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+    const reader = new FileReader();
+    reader.readAsDataURL(capturedPhotoBlob);
+    reader.onloadend = async () => {
+        const base64String = reader.result.split(',')[1];
+        const success = await uploadFile(base64String, `guest-photo-${Date.now()}.jpeg`, 'image/jpeg');
+        loadingSection.classList.add('d-none');
+        if (success) {
+            thankYouSection.classList.remove('d-none');
+        } else {
+            selfiePromptSection.classList.remove('d-none');
+        }
+    };
 });
